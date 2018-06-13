@@ -40,4 +40,3 @@ piece.
   was spent debugging an error because `scanr` is different from `reductions`.
 * Gotta love the static-linked binary and the more robust argparse library.
 * No tests because I was mainly seeing how long this took me.
-* 
