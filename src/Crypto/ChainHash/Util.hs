@@ -1,12 +1,13 @@
 module Crypto.ChainHash.Util where
 
+import           Control.Arrow
 import           Control.Exception
 import qualified Data.ByteString   as B
 import           Numeric           (readHex)
 import           Text.Printf
 
 data ChainHashException =
-  InvalidChunkException Integer
+  InvalidChunkException Int
                         B.ByteString
                         B.ByteString
 
@@ -23,9 +24,11 @@ instance Show ChainHashException where
 hexify :: B.ByteString -> String
 hexify = (printf "%02x" =<<) . B.unpack
 
+stringToHex :: String -> Integer
+stringToHex s = fst (head (readHex s))
+
 unhexify :: String -> B.ByteString
 unhexify [] = B.empty
 unhexify [_] =
   error "Cannot unhexify a string with an odd number of characters."
-unhexify (a:b:r) =
-  B.cons (fromInteger (fst (head (readHex [a, b])))) (unhexify r)
+unhexify s = (((take 2 >>> stringToHex >>> fromInteger) &&& (drop 2 >>> unhexify)) >>> uncurry B.cons) s

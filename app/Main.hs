@@ -5,31 +5,37 @@ module Main where
 
 import           Crypto.ChainHash
 import           System.Console.CmdArgs
+import           System.Environment     (getArgs, withArgs)
 
+{-# ANN block_size ("HLint: ignore Use camelCase" :: String) #-}
 data ChainHash
-  = Encode { input     :: Maybe FilePath
-           , output    :: Maybe FilePath
-           , blockSize :: Integer }
-  | Decode { input     :: Maybe FilePath
-           , output    :: Maybe FilePath
-           , checksum  :: Maybe String
-           , blockSize :: Integer }
+  = Encode { input      :: Maybe FilePath
+           , output     :: Maybe FilePath
+           , block_size :: Int }
+  | Decode { input      :: Maybe FilePath
+           , output     :: Maybe FilePath
+           , checksum   :: Maybe String
+           , block_size :: Int }
   deriving (Show, Data, Typeable)
 
+encodeCmd :: ChainHash
 encodeCmd =
   Encode
   { input = def &= help "file to encode"
   , output = def &= help "path to write encoded file to"
-  , blockSize = 1024 &= help "number of bytes in a block"
-  }
+  , block_size = 1024 &= help "number of bytes in a block"
+  } &=
+  help "Encode a file using the chain-hash"
 
+decodeCmd :: ChainHash
 decodeCmd =
   Decode
   { input = def &= help "file to encode"
   , output = def &= help "path to write encoded file to"
   , checksum = def &= help "initial checksum for the first block"
-  , blockSize = 1024 &= help "number of bytes in a block"
-  }
+  , block_size = 1024 &= help "number of bytes in a block"
+  } &=
+  help "Decode a file that was encoded with the chain-hash"
 
 defaultFile :: FilePath
 defaultFile = "resources/example.txt"
@@ -37,33 +43,44 @@ defaultFile = "resources/example.txt"
 validateAndRun :: ChainHash -> IO (Either String ())
 validateAndRun Encode { input = Just input
                       , output = Just output
-                      , blockSize = blockSize
+                      , block_size = block_size
                       } = do
-                        hash <- encode input output blockSize
-                        putStr $ hexify hash ++ "\n"
-                        return $ Right ()
-validateAndRun Encode {input = Nothing,..} = return $ Left "Missing input filename."
-validateAndRun Encode {output = Nothing,..} = return $ Left "Missing output filename."
+  hash <- encode input output block_size
+  putStr $ hexify hash ++ "\n"
+  return $ Right ()
+validateAndRun Encode {input = Nothing, ..} = return $ Left "Missing --input"
+validateAndRun Encode {output = Nothing, ..} = return $ Left "Missing --output"
 validateAndRun Decode { input = Just input
                       , output = Just output
                       , checksum = Just checksum
-                      , blockSize = blockSize
+                      , block_size = block_size
                       } = do
-                        decode input output (unhexify checksum) blockSize
-                        return $ Right ()
-validateAndRun Decode {input = Nothing,..} = return $ Left "Missing input filename."
-validateAndRun Decode {output = Nothing,..} = return $ Left "Missing output filename."
-validateAndRun Decode {checksum = Nothing,..} = return $ Left "Missing initial checksum."
+  decode input output (unhexify checksum) block_size
+  return $ Right ()
+validateAndRun Decode {input = Nothing, ..} = return $ Left "Missing --input"
+validateAndRun Decode {output = Nothing, ..} = return $ Left "Missing --output"
+validateAndRun Decode {checksum = Nothing, ..} =
+  return $ Left "Missing --checksum"
+
+mode :: Mode (CmdArgs ChainHash)
+mode =
+  cmdArgsMode $
+  modes [encodeCmd, decodeCmd] &=
+  help
+    "Encode and decode arbitrarily large files with a chain-hashing function." &=
+  program "chain-hash-hs-exe" &=
+  summary "ChainHash v0.1.0"
+
+handleErrorState :: String -> IO ()
+handleErrorState errorMsg = putStr $ "\n" ++ errorMsg ++ "\n"
 
 main :: IO ()
 main = do
-  mode <- cmdArgs (modes [encodeCmd, decodeCmd])
-  result <- validateAndRun mode
-  case result of
-    Left errorMsg -> do
-        putStr $ "\n"++ errorMsg ++ "\n"
-        print $ cmdArgsMode mode
-    Right () -> return ()
---  ihash <- encode defaultFile (defaultFile ++ ".encoded") 1024
---  print (hexify ihash)
---  decode (defaultFile ++ ".encoded") (defaultFile ++ ".decoded") ihash 1024
+  suppliedArgs <- getArgs
+  opts <-
+    (if null suppliedArgs
+       then withArgs ["--help"]
+       else id) $
+    cmdArgsRun mode
+  result <- validateAndRun opts
+  either handleErrorState return result
