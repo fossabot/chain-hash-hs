@@ -1,4 +1,6 @@
 # chain-hash-hs
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fjbristow%2Fchain-hash-hs.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fjbristow%2Fchain-hash-hs?ref=badge_shield)
+
 
 Simulates a data stream with checksums that apply to each item in the stream.
 
@@ -40,3 +42,7 @@ piece.
   was spent debugging an error because `scanr` is different from `reductions`.
 * Gotta love the static-linked binary and the more robust argparse library.
 * No tests because I was mainly seeing how long this took me.
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fjbristow%2Fchain-hash-hs.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fjbristow%2Fchain-hash-hs?ref=badge_large)
